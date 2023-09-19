@@ -2,9 +2,13 @@
   "name": "@farbenmeer/editor",
   "version": "0.1.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "files": [
+    "dist/*"
+  ],
   "private": false,
   "scripts": {
+    "dev": "tsc -w",
     "build": "tsc",
     "release": "pnpm build && pnpm publish"
   },
