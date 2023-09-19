@@ -1,0 +1,19 @@
+.link {
+    @apply underline cursor-pointer;
+}
+
+.linkable {
+    @apply no-underline cursor-pointer;
+}
+
+.linkable:hover {
+    @apply underline;
+}
+
+.container {
+    @apply p-4 border relative overflow-hidden;
+}
+
+.container svg {
+    @apply w-full;
+}

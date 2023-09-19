@@ -1,0 +1,32 @@
+
+.cell {
+    @apply border border-spacing-2 border-collapse p-2;
+}
+
+.deleteRow {
+    @apply hidden absolute -top-6 -left-5 opacity-0 hover:opacity-100 transition-opacity;
+}
+
+.deleteRow button, .deleteColumn button, .addRow button, .addColumn button {
+    @apply p-1;
+}
+
+.cell:nth-of-type(1) .deleteRow {
+    @apply block;
+}
+
+.deleteColumn {
+    @apply hidden absolute -top-5 left-1/2 -translate-x-1/2 opacity-0 hover:opacity-100 transition-opacity;
+}
+
+.row:nth-of-type(1) .deleteColumn {
+    @apply block;
+}
+
+.addRow {
+    @apply absolute -top-1 left-1/2 -translate-x-1/2 opacity-0 hover:opacity-100 transition-opacity;
+}
+
+.addColumn {
+    @apply absolute -top-6 -right-5 opacity-0 hover:opacity-100 transition-opacity;
+}

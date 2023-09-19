@@ -1,0 +1,22 @@
+.popover {
+  @apply p-2 bg-white rounded-lg shadow border max-w-md max-h-32 flex flex-row transition-opacity overflow-hidden truncate z-20;
+}
+
+.image {
+  @apply h-20 w-20 rounded-full shadow-inner py-0 my-0 mr-4 bg-gray-500;
+}
+
+.busy {
+  @apply blur opacity-25;
+}
+
+.textContent {
+  @apply flex flex-col;
+  .person>& {
+    @apply mr-2;
+  }
+}
+
+.heading {
+  @apply my-0 py-0;
+}

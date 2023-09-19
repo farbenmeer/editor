@@ -1,0 +1,26 @@
+.fm-editor-mention {
+  @apply font-semibold px-0.5 whitespace-nowrap rounded-md;
+
+
+}
+
+.fm-editor {
+  @apply px-1;
+  
+  min-height: 10rem !important;
+}
+
+.fm-editor-nopad {
+  @apply my-0 py-0 px-0;
+  &>p {
+    @apply my-0 py-0;
+  }
+}
+
+.fm-editor ul {
+  @apply list-disc pl-6;
+}
+
+.fm-editor ol {
+  @apply list-decimal pl-6;
+}

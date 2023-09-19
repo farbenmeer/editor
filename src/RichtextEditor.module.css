@@ -1,0 +1,36 @@
+.mention {
+  @apply font-semibold px-0.5 whitespace-nowrap rounded-md;
+}
+
+.editor {
+  @apply px-1;
+  
+  min-height: 10rem !important;
+}
+
+.chapter {
+  @apply text-blue-800 hover:text-blue-700 underline;
+}
+
+.term {
+  @apply underline decoration-dotted;
+}
+
+.noPad {
+  @apply my-0 py-0 px-0;
+  &>p {
+    @apply my-0 py-0;
+  }
+}
+
+.person {}
+
+.selected {}
+
+.editor ul {
+  @apply list-disc pl-6;
+}
+
+.editor ol {
+  @apply list-decimal pl-6;
+}
