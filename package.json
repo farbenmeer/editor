@@ -1,0 +1,33 @@
+{
+  "name": "@farbenmeer/editor",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "private": false,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/react": "^18.2.22",
+    "next": "^13.4.19",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "typescript": "^5.2.2"
+  },
+  "peerDependencies": {
+    "next": "^13.4.19",
+    "react": "^18.2.0"
+  },
+  "dependencies": {
+    "@floating-ui/dom": "^1.5.3",
+    "@floating-ui/react": "^0.25.4",
+    "clsx": "^2.0.0",
+    "react-icons": "^4.11.0",
+    "slate": "^0.94.1",
+    "slate-history": "^0.93.0",
+    "slate-react": "^0.98.4"
+  }
+}
