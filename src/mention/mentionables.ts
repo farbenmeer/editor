@@ -1,7 +1,7 @@
-import { Chapter, Person, Term } from '@prisma/client';
-import { Descendant } from 'slate';
+import { Chapter, Person, Term } from "@prisma/client";
+import { Descendant } from "slate";
 
-export type MentionType = 'Chapter' | 'Person' | 'Term';
+export type MentionType = "Chapter" | "Person" | "Term";
 
 export interface Mentionable {
   name: string;
@@ -23,7 +23,7 @@ export function mentionMatches(a: Mentionable, b?: Mentionable) {
 
 export function termToMentionable(term: Term): Mentionable {
   return {
-    targetType: 'Term',
+    targetType: "Term",
     targetId: term.id,
     name: term.name,
   };
@@ -31,7 +31,7 @@ export function termToMentionable(term: Term): Mentionable {
 
 export function chapterToMentionable(chapter: Chapter): Mentionable {
   return {
-    targetType: 'Chapter',
+    targetType: "Chapter",
     targetId: chapter.id,
     name: chapter.title,
   };
@@ -39,7 +39,7 @@ export function chapterToMentionable(chapter: Chapter): Mentionable {
 
 export function personToMentionable(person: Person): Mentionable {
   return {
-    targetType: 'Person',
+    targetType: "Person",
     targetId: person.id,
     name: person.fullName,
     iconUrl: person.pictureUrl,

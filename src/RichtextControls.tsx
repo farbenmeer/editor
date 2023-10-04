@@ -1,8 +1,7 @@
-import clsx from 'clsx';
-import { ReactNode, forwardRef } from 'react';
-import { LuHeading1, LuHeading2 } from 'react-icons/lu';
+import clsx from "clsx";
+import { ReactNode, cloneElement, forwardRef, useContext } from "react";
+import { LuHeading1, LuHeading2 } from "react-icons/lu";
 import {
-  MdAccountTree,
   MdFormatAlignCenter,
   MdFormatAlignJustify,
   MdFormatAlignLeft,
@@ -13,26 +12,24 @@ import {
   MdFormatListNumbered,
   MdFormatQuote,
   MdFormatUnderlined,
-  MdImage,
   MdLink,
-  MdTableView,
-} from 'react-icons/md';
-import { Editor, Element, Transforms } from 'slate';
-import { useFocused, useSlate, useSlateStatic } from 'slate-react';
+} from "react-icons/md";
+import { Editor, Element, Transforms } from "slate";
+import { useFocused, useSlate } from "slate-react";
 import {
   CustomEditor,
   CustomElement,
   CustomText,
   EmptyText,
-} from 'src/components/form/richtext/custom-types';
-import styles from './RichtextControls.module.css';
-import { insertDiagram } from './diagram/diagram-richtext-support';
-import { DiagramUploadDialog } from './diagram/diagram-upload-dialog';
-import { insertImage } from './image/image-richtext-support';
-import { LinkEditDialog } from './link/link-edit-dialog';
-import { LinkElement, removeLink, setLink } from './link/link-richtext-support';
-import { plugins } from './richtext-support';
-import { insertTable } from './table/table-richtext-support';
+} from "./custom-types";
+import { LinkEditDialog } from "./link/link-edit-dialog";
+import {
+  LinkElement,
+  isLink,
+  removeLink,
+  setLink,
+} from "./link/link-richtext-support";
+import { PluginsContext } from "./richtext-support";
 
 interface RichtextControlButtonProps {
   onClick(): void;
@@ -41,22 +38,24 @@ interface RichtextControlButtonProps {
   title?: string;
 }
 
-export const RichtextControlButton = forwardRef<HTMLButtonElement, RichtextControlButtonProps>(
-  function RichtextControlButton({ title, className, onClick, children }, ref) {
-    return (
-      <button
-        ref={ref}
-        title={title}
-        className={clsx(styles.button, className)}
-        onMouseDown={event => {
-          event.preventDefault();
-          onClick();
-        }}>
-        {children}
-      </button>
-    );
-  },
-);
+export const RichtextControlButton = forwardRef<
+  HTMLButtonElement,
+  RichtextControlButtonProps
+>(function RichtextControlButton({ title, className, onClick, children }, ref) {
+  return (
+    <button
+      ref={ref}
+      title={title}
+      className={clsx("fm-editor-controls-button", className)}
+      onMouseDown={(event) => {
+        event.preventDefault();
+        onClick();
+      }}
+    >
+      {children}
+    </button>
+  );
+});
 
 export function RichtextMarkButton({
   children,
@@ -72,14 +71,16 @@ export function RichtextMarkButton({
 
   return (
     <button
-      className={clsx(styles.button, {
-        [styles.disabled!]: disabled,
-        [styles.active!]: active,
-      })}
-      onMouseDown={ev => {
+      className={clsx(
+        "fm-editor-controls-button",
+        active && "fm-editor-controls-button-active"
+      )}
+      disabled={disabled}
+      onMouseDown={(ev) => {
         ev.preventDefault();
         toggleMark(editor, mark);
-      }}>
+      }}
+    >
       {children}
     </button>
   );
@@ -87,7 +88,7 @@ export function RichtextMarkButton({
 
 export function RichtextBlockButton<
   BlockType extends keyof CustomElement,
-  Format extends CustomElement[BlockType],
+  Format extends CustomElement[BlockType]
 >({
   blockType,
   format,
@@ -104,24 +105,26 @@ export function RichtextBlockButton<
 
   return (
     <button
-      className={clsx(styles.button, {
-        [styles.disabled!]: disabled,
-        [styles.active!]: active,
-      })}
-      onMouseDown={ev => {
+      className={clsx(
+        "fm-editor-controls-button",
+        active && "fm-editor-controls-button-active"
+      )}
+      disabled={disabled}
+      onMouseDown={(ev) => {
         ev.preventDefault();
         toggleBlock(editor, blockType, format as never);
-      }}>
+      }}
+    >
       {children}
     </button>
   );
 }
 
 export function RichtextControlGroup({ children }: { children: any }) {
-  return <div className={styles.group}>{children}</div>;
+  return <div className="fm-editor-controls-group">{children}</div>;
 }
 
-type Mark = keyof Omit<CustomText & EmptyText, 'text'>;
+type Mark = keyof Omit<CustomText & EmptyText, "text">;
 
 function isMarkActive(editor: CustomEditor, mark: Mark) {
   return Editor.marks(editor)?.[mark as never] === true;
@@ -134,15 +137,16 @@ function toggleMark(editor: CustomEditor, mark: Mark) {
 
 function isBlockActive<
   BlockType extends keyof CustomElement,
-  Format extends CustomElement[BlockType],
+  Format extends CustomElement[BlockType]
 >(editor: CustomEditor, blockType: BlockType, format: Format) {
   const { selection } = editor;
   if (!selection) return false;
   const [match] = Array.from(
     Editor.nodes(editor, {
       at: Editor.unhangRange(editor, selection),
-      match: n => !Editor.isEditor(n) && Element.isElement(n) && n[blockType] === format,
-    }),
+      match: (n) =>
+        !Editor.isEditor(n) && Element.isElement(n) && n[blockType] === format,
+    })
   );
   return !!match;
 }
@@ -157,49 +161,63 @@ function isAlign(format: string) {
 
 function toggleBlock<
   BlockType extends keyof CustomElement,
-  Format extends CustomElement[BlockType] & string,
+  Format extends CustomElement[BlockType] & string
 >(editor: CustomEditor, blockType: BlockType, format: Format) {
   const active = isBlockActive(editor, blockType, format);
   const list = isList(format);
   const align = isAlign(format);
 
   Transforms.unwrapNodes(editor, {
-    match: n => !Editor.isEditor(n) && Element.isElement(n) && isList(n.type) && !align,
+    match: (n) =>
+      !Editor.isEditor(n) && Element.isElement(n) && isList(n.type) && !align,
     split: true,
   });
   let newProperties: Partial<Element>;
   if (align) {
     newProperties = { align: active ? undefined : format } as never;
   } else {
-    newProperties = { type: active ? 'paragraph' : list ? 'list-item' : format } as never;
+    newProperties = {
+      type: active ? "paragraph" : list ? "list-item" : format,
+    } as never;
   }
   Transforms.setNodes<Element>(editor, newProperties);
 
-  if (!active && list) Transforms.wrapNodes(editor, { type: format, children: [] } as never);
+  if (!active && list)
+    Transforms.wrapNodes(editor, { type: format, children: [] } as never);
 }
 
 interface Props {
-  variant: 'full' | 'minimal';
+  variant: "full" | "minimal";
 }
 
 export function RichtextControls({ variant }: Props) {
   const isFocused = useFocused();
   const editor = useSlate();
+  const plugins = useContext(PluginsContext);
 
   let pluginControls: ReactNode | null = null;
+  let pluginButtons: ReactNode[] = [];
 
   for (const plugin of plugins) {
-    if (!plugin.controls) continue;
+    if (plugin.button) {
+      pluginButtons.push(<plugin.button key={plugin.name} />);
+    }
+
     const [node] = Editor.nodes(editor, { match: plugin.isElement });
 
-    if (node) {
+    if (node && plugin.controls) {
       const [element, path] = node;
       pluginControls = plugin.controls(editor, element as any, path);
     }
   }
 
   return (
-    <div className={clsx(styles.controls, isFocused && styles.visible)}>
+    <div
+      className={clsx(
+        "fm-editor-controls",
+        isFocused && "fm-editor-controls-visible"
+      )}
+    >
       <RichtextControlGroup>
         <RichtextMarkButton mark="bold">
           <MdFormatBold />
@@ -217,12 +235,12 @@ export function RichtextControls({ variant }: Props) {
           <RichtextBlockButton blockType="type" format="heading">
             <LuHeading1 />
           </RichtextBlockButton>
-          {variant === 'full' && (
+          {variant === "full" && (
             <RichtextBlockButton blockType="type" format="heading-two">
               <LuHeading2 />
             </RichtextBlockButton>
           )}
-          {variant === 'full' && (
+          {variant === "full" && (
             <RichtextBlockButton blockType="type" format="block-quote">
               <MdFormatQuote />
             </RichtextBlockButton>
@@ -235,7 +253,7 @@ export function RichtextControls({ variant }: Props) {
           </RichtextBlockButton>
         </RichtextControlGroup>
       )}
-      {variant === 'full' && !pluginControls && (
+      {variant === "full" && !pluginControls && (
         <RichtextControlGroup>
           <RichtextBlockButton blockType="align" format="left">
             <MdFormatAlignLeft />
@@ -252,54 +270,10 @@ export function RichtextControls({ variant }: Props) {
         </RichtextControlGroup>
       )}
       {pluginControls}
-      {variant === 'full' && (
-        <RichtextControlGroup>
-          <DiagramUploadButton />
-          <TableInsertButton />
-          <ImageInsertButton />
-        </RichtextControlGroup>
+      {variant === "full" && (
+        <RichtextControlGroup>{pluginButtons}</RichtextControlGroup>
       )}
     </div>
-  );
-}
-
-function DiagramUploadButton() {
-  const editor = useSlate();
-  return (
-    <DiagramUploadDialog onUpload={svg => insertDiagram(editor, { svg, links: {} })}>
-      <button className={styles.button}>
-        <MdAccountTree />
-      </button>
-    </DiagramUploadDialog>
-  );
-}
-
-function ImageInsertButton() {
-  const editor = useSlateStatic();
-
-  return (
-    <button
-      className={styles.button}
-      onMouseDown={event => {
-        event.preventDefault();
-        insertImage(editor);
-      }}>
-      <MdImage />
-    </button>
-  );
-}
-
-function TableInsertButton() {
-  const editor = useSlateStatic();
-  return (
-    <button
-      className={styles.button}
-      onMouseDown={event => {
-        event.preventDefault();
-        insertTable(editor);
-      }}>
-      <MdTableView />
-    </button>
   );
 }
 
@@ -308,10 +282,10 @@ function getActiveLink(editor: Editor): LinkElement | null {
   if (!selection) return null;
 
   const [match] = Array.from(
-    Editor.nodes<LinkElement>(editor, {
+    Editor.nodes<any>(editor, {
       at: Editor.unhangRange(editor, selection),
-      match: n => !Editor.isEditor(n) && Element.isElement(n) && n.type === 'link',
-    }),
+      match: isLink,
+    })
   );
 
   if (!match) return null;
@@ -327,9 +301,13 @@ function EditLinkButton() {
   return (
     <LinkEditDialog
       url={activeLink?.url}
-      onSave={url => setLink(editor, activeLink, url)}
-      onRemove={() => removeLink(editor)}>
-      <button className={styles.button} onMouseDown={event => event.preventDefault()}>
+      onSave={(url) => setLink(editor, activeLink, url)}
+      onRemove={() => removeLink(editor)}
+    >
+      <button
+        className="fm-editor-controls-button"
+        onMouseDown={(event) => event.preventDefault()}
+      >
         <MdLink />
       </button>
     </LinkEditDialog>

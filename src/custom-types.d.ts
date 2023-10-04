@@ -1,62 +1,55 @@
-import { BaseEditor, BaseRange, Descendant, Element, Range } from 'slate';
-import { HistoryEditor } from 'slate-history';
-import { ReactEditor } from 'slate-react';
-import { PluginElement } from './richtext-support';
+import { BaseEditor, BaseRange, Descendant, Element, Range } from "slate";
+import { HistoryEditor } from "slate-history";
+import { ReactEditor } from "slate-react";
 
 export type SharedElementProperties = {
-  align?: 'left' | 'center' | 'right' | 'justify';
+  align?: "left" | "center" | "right" | "justify";
 };
 
 export type BlockQuoteElement = {
-  type: 'block-quote';
+  type: "block-quote";
   align?: string;
   children: Descendant[];
 };
 
 export type BulletedListElement = {
-  type: 'bulleted-list';
+  type: "bulleted-list";
   align?: string;
   children: Descendant[];
 };
 
 export type NumberedListElement = {
-  type: 'numbered-list';
+  type: "numbered-list";
   align?: string;
   children: Descendant[];
 };
 
 export type EditableVoidElement = {
-  type: 'editable-void';
+  type: "editable-void";
   children: EmptyText[];
 };
 
 export type HeadingElement = {
-  type: 'heading';
+  type: "heading";
   align?: string;
   children: Descendant[];
 };
 
 export type HeadingTwoElement = {
-  type: 'heading-two';
+  type: "heading-two";
   align?: string;
   children: Descendant[];
 };
 
-export type ImageElement = {
-  type: 'image';
-  url: string;
-  children: EmptyText[];
-};
-
-export type ListItemElement = { type: 'list-item'; children: Descendant[] };
+export type ListItemElement = { type: "list-item"; children: Descendant[] };
 
 export type ParagraphElement = {
-  type: 'paragraph';
+  type: "paragraph";
   align?: string;
   children: Descendant[];
 };
 
-export type TitleElement = { type: 'title'; children: Descendant[] };
+export type TitleElement = { type: "title"; children: Descendant[] };
 
 type CustomElement = SharedElementProperties &
   (
@@ -66,11 +59,9 @@ type CustomElement = SharedElementProperties &
     | EditableVoidElement
     | HeadingElement
     | HeadingTwoElement
-    | ImageElement
     | ListItemElement
     | ParagraphElement
     | TitleElement
-    | PluginElement
   );
 
 export type CustomText = {
@@ -90,7 +81,7 @@ export type CustomEditor = BaseEditor &
     nodeToDecorations?: Map<Element, Range[]>;
   };
 
-declare module 'slate' {
+declare module "slate" {
   interface CustomTypes {
     Editor: CustomEditor;
     Element: CustomElement;

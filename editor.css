@@ -1,26 +1,115 @@
 .fm-editor-mention {
-  @apply font-semibold px-0.5 whitespace-nowrap rounded-md;
-
-
+  font-weight: 600;
+  padding-left: 0.125rem;
+  padding-right: 0.125rem;
+  white-space: nowrap;
+  border-radius: 0.375rem;
 }
 
 .fm-editor {
-  @apply px-1;
-  
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+
   min-height: 10rem !important;
 }
 
 .fm-editor-nopad {
-  @apply my-0 py-0 px-0;
-  &>p {
+  margin-top: 0;
+  margin-bottom: 0;
+  padding: 0;
+  & > p {
     @apply my-0 py-0;
   }
 }
 
+.fm-editor-nopad > p {
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
 .fm-editor ul {
-  @apply list-disc pl-6;
+  list-style-type: disc;
+  padding-left: 1.5rem;
 }
 
 .fm-editor ol {
-  @apply list-decimal pl-6;
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+}
+
+.fm-editor-controls {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: rgb(255 255 255 / 0.25);
+  z-index: 10;
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  justify-content: center;
+  transition-property: opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+  opacity: 0;
+}
+
+.fm-editor-controls-visible {
+  opacity: 1;
+}
+
+.fm-editor-controls-button {
+  padding: 0.375rem;
+  border-radius: 0.5rem;
+  background-color: white;
+  box-shadow: 0 0 #0000, 0 0 #0000, 0 1px 3px rgb(0 0 0 / 0.1),
+    0 1px 2px -1px rgb(0 0 0 / 0.1);
+  transition-property: color, background-color, border-color,
+    text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter,
+    backdrop-filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+  border-width: 1px;
+  border-color: rgb(228 228 231);
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
+.fm-editor-controls-button:hover {
+  background-color: rgb(250 250 250);
+}
+
+.fm-editor-controls-button:disabled {
+  background-color: rgb(228 228 231);
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+  box-shadow: none;
+}
+
+.fm-editor-controls-button-active {
+  background-color: rgb(244 244 245);
+}
+
+.fm-editor-controls-group:first-child {
+  border-radius: 0;
+}
+
+.fm-editor-controls-group > *:first-child {
+  border-top-left-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
+}
+
+.fm-editor-controls-group > *:last-child {
+  border-top-right-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+  border-right-width: 1px;
+}
+
+.fm-editor-image {
+  width: 100%;
+  position: relative;
+  min-height: 5rem;
 }

@@ -26,6 +26,9 @@ dependencies:
   slate-react:
     specifier: ^0.98.4
     version: 0.98.4(react-dom@18.2.0)(react@18.2.0)(slate@0.94.1)
+  thumbhash:
+    specifier: ^0.1.1
+    version: 0.1.1
 
 devDependencies:
   '@changesets/cli':
@@ -2049,6 +2052,10 @@ packages:
     resolution: {integrity: sha512-wK0Ri4fOGjv/XPy8SBHZChl8CM7uMc5VML7SqiQ0zG7+J5Vr+RMQDoHa2CNT6KHUnTGIXH34UDMkPzAUyapBZg==}
     engines: {node: '>=8'}
     dev: true
+
+  /thumbhash@0.1.1:
+    resolution: {integrity: sha512-kH5pKeIIBPQXAOni2AiY/Cu/NKdkFREdpH+TLdM0g6WA7RriCv0kPLgP731ady67MhTAqrVG/4mnEeibVuCJcg==}
+    dev: false
 
   /tiny-invariant@1.0.6:
     resolution: {integrity: sha512-FOyLWWVjG+aC0UqG76V53yAWdXfH8bO6FNmyZOuUrzDzK8DI3/JRY25UD7+g49JWM1LXwymsKERB+DzI0dTEQA==}

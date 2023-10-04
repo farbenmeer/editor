@@ -1,4 +1,4 @@
-import { KeyboardEvent } from 'react';
+import { KeyboardEvent } from "react";
 import {
   Descendant,
   Editor,
@@ -9,43 +9,60 @@ import {
   Point,
   Range,
   Transforms,
-} from 'slate';
-import { ReactEditor, RenderElementProps } from 'slate-react';
-import { EditorPlugin } from '../richtext-support';
-import { renderTableRichtextControls } from './table-richtext-controls';
-import styles from './table.module.css';
+} from "slate";
+import { ReactEditor, RenderElementProps } from "slate-react";
+import { EditorPluginDefinition } from "../richtext-support";
+import { renderTableRichtextControls } from "./table-richtext-controls";
+import styles from "./table.module.css";
 
-export type TableCellElement = { type: 'table-cell'; children: Descendant[] };
+export type TableCellElement = { type: "table-cell"; children: Descendant[] };
 
-type TableRowElement = { type: 'table-row'; children: TableCellElement[] };
+type TableRowElement = { type: "table-row"; children: TableCellElement[] };
 
-type TableTableElement = { type: 'table'; children: TableRowElement[] };
+type TableTableElement = { type: "table"; children: TableRowElement[] };
 
-export type TableElement = TableTableElement | TableRowElement | TableCellElement;
+export type TableElement =
+  | TableTableElement
+  | TableRowElement
+  | TableCellElement;
 
 export function isTableElement(element: Node): element is TableElement {
   return (
     !Editor.isEditor(element) &&
-    'type' in element &&
-    ['table', 'table-row', 'table-cell'].includes(element.type)
+    "type" in element &&
+    ["table", "table-row", "table-cell"].includes(element.type)
   );
 }
 
 function isTable(element: Node): element is TableTableElement {
-  return !Editor.isEditor(element) && 'type' in element && element.type === 'table';
+  return (
+    !Editor.isEditor(element) && "type" in element && element.type === "table"
+  );
 }
 
 function isTableRow(element: Node): element is TableRowElement {
-  return !Editor.isEditor(element) && 'type' in element && element.type === 'table-row';
+  return (
+    !Editor.isEditor(element) &&
+    "type" in element &&
+    element.type === "table-row"
+  );
 }
 
 export function isTableCell(element: Node): element is TableCellElement {
-  return !Editor.isEditor(element) && 'type' in element && element.type === 'table-cell';
+  return (
+    !Editor.isEditor(element) &&
+    "type" in element &&
+    element.type === "table-cell"
+  );
 }
 
-function Table({ element, attributes, children }: RenderElementProps & { element: TableElement }) {
+function Table({
+  element,
+  attributes,
+  children,
+}: RenderElementProps & { element: TableElement }) {
   switch (element.type) {
-    case 'table': {
+    case "table": {
       return (
         <div className="px-2 w-full" {...attributes}>
           <table className="w-full">
@@ -54,14 +71,14 @@ function Table({ element, attributes, children }: RenderElementProps & { element
         </div>
       );
     }
-    case 'table-row':
+    case "table-row":
       return (
         <tr className={styles.row} {...attributes}>
           {children}
         </tr>
       );
 
-    case 'table-cell':
+    case "table-cell":
       return (
         <td className={styles.cell} {...attributes}>
           {children}
@@ -75,7 +92,8 @@ function deleteBackward(editor: Editor) {
 
   if (selection && Range.isCollapsed(selection)) {
     const [cell] = Editor.nodes(editor, {
-      match: n => !Editor.isEditor(n) && Element.isElement(n) && n.type === 'table-cell',
+      match: (n) =>
+        !Editor.isEditor(n) && Element.isElement(n) && n.type === "table-cell",
     });
 
     if (cell) {
@@ -94,7 +112,8 @@ function deleteForward(editor: Editor) {
 
   if (selection && Range.isCollapsed(selection)) {
     const [cell] = Editor.nodes(editor, {
-      match: n => !Editor.isEditor(n) && Element.isElement(n) && n.type === 'table-cell',
+      match: (n) =>
+        !Editor.isEditor(n) && Element.isElement(n) && n.type === "table-cell",
     });
 
     if (cell) {
@@ -133,16 +152,16 @@ function insertBreak(editor: Editor) {
 }
 
 function onKeyDown(editor: Editor, event: KeyboardEvent) {
-  if (event.key === 'Tab') {
+  if (event.key === "Tab") {
     const { selection } = editor;
 
     if (!selection) return;
 
     const [cell] = Editor.nodes<TableCellElement>(editor, {
-      match: n => !Editor.isEditor(n) && isTableCell(n),
+      match: (n) => !Editor.isEditor(n) && isTableCell(n),
     });
     const [table] = Editor.nodes<TableElement>(editor, {
-      match: n => !Editor.isEditor(n) && isTable(n),
+      match: (n) => !Editor.isEditor(n) && isTable(n),
     });
 
     if (cell && table) {
@@ -161,7 +180,10 @@ function onKeyDown(editor: Editor, event: KeyboardEvent) {
 
       try {
         const sibling = Path.next(path);
-        Editor.nodes(editor, { at: sibling, match: n => !Editor.isEditor(n) && isTableCell(n) });
+        Editor.nodes(editor, {
+          at: sibling,
+          match: (n) => !Editor.isEditor(n) && isTableCell(n),
+        });
         Transforms.select(editor, sibling);
       } catch {
         insertColumn(editor, node);
@@ -171,9 +193,12 @@ function onKeyDown(editor: Editor, event: KeyboardEvent) {
   }
 }
 
-const emptyCell = (): TableCellElement => ({ type: 'table-cell', children: [{ text: '' }] });
+const emptyCell = (): TableCellElement => ({
+  type: "table-cell",
+  children: [{ text: "" }],
+});
 const emptyRow = (n: number): TableRowElement => ({
-  type: 'table-row',
+  type: "table-row",
   children: Array.from({ length: n }).map(() => emptyCell()),
 });
 
@@ -189,7 +214,7 @@ export function insertTable(editor: Editor) {
   }
 
   const table: TableElement = {
-    type: 'table',
+    type: "table",
     children: [emptyRow(2), emptyRow(2)],
   };
 
@@ -197,15 +222,18 @@ export function insertTable(editor: Editor) {
   Transforms.move(editor);
 }
 
-function findCell(editor: Editor, element?: TableCellElement): NodeEntry<TableCellElement> {
+function findCell(
+  editor: Editor,
+  element?: TableCellElement
+): NodeEntry<TableCellElement> {
   switch (element?.type) {
-    case 'table-cell': {
+    case "table-cell": {
       const path = ReactEditor.findPath(editor, element);
       return [element, path];
     }
     default: {
       const [cell] = Editor.nodes<TableCellElement>(editor, {
-        match: n => !Editor.isEditor(n) && isTableCell(n),
+        match: (n) => !Editor.isEditor(n) && isTableCell(n),
       });
       return cell;
     }
@@ -220,9 +248,13 @@ export function insertRow(editor: Editor, element?: TableCellElement) {
   });
   const nextRow = Path.next(rowPath);
 
-  Transforms.insertNodes<TableRowElement>(editor, emptyRow(row.children.length), {
-    at: nextRow,
-  });
+  Transforms.insertNodes<TableRowElement>(
+    editor,
+    emptyRow(row.children.length),
+    {
+      at: nextRow,
+    }
+  );
   Transforms.move(editor);
   Transforms.select(editor, [...nextRow, cellPath[cellPath.length - 1]]);
 }
@@ -239,7 +271,9 @@ export function insertColumn(editor: Editor, element?: TableCellElement) {
 
   table.children.forEach((row, rowIndex) => {
     const cellPath = [...tablePath, rowIndex, cellIndex];
-    Transforms.insertNodes<TableCellElement>(editor, emptyCell(), { at: cellPath });
+    Transforms.insertNodes<TableCellElement>(editor, emptyCell(), {
+      at: cellPath,
+    });
   });
 
   Transforms.move(editor);
@@ -270,7 +304,7 @@ export function deleteRow(editor: Editor, element?: TableCellElement) {
   Transforms.move(editor);
   Transforms.select(
     editor,
-    rowIndex < rowCount - 1 ? cellPath : [...Path.previous(rowPath), cellIndex],
+    rowIndex < rowCount - 1 ? cellPath : [...Path.previous(rowPath), cellIndex]
   );
 }
 
@@ -295,16 +329,19 @@ export function deleteColumn(editor: Editor, element?: TableCellElement) {
   });
 
   Transforms.move(editor);
-  Transforms.select(editor, cellIndex < columnCount - 1 ? cellPath : Path.previous(cellPath));
+  Transforms.select(
+    editor,
+    cellIndex < columnCount - 1 ? cellPath : Path.previous(cellPath)
+  );
 }
 
 function insertData(editor: Editor, data: DataTransfer) {
-  Transforms.insertText(editor, data.getData('text/plain'));
+  Transforms.insertText(editor, data.getData("text/plain"));
   Transforms.move(editor);
   return true;
 }
 
-export const tablePlugin: EditorPlugin<TableElement> = {
+export const tablePlugin: EditorPluginDefinition<TableElement> = {
   isElement: isTableElement,
   component: Table,
   deleteBackward,

@@ -1,16 +1,23 @@
-import clsx from 'clsx';
-import { KeyboardEvent, useMemo } from 'react';
-import { Descendant, TextUnit, createEditor } from 'slate';
-import { withHistory } from 'slate-history';
-import { Editable, Slate, withReact } from 'slate-react';
-import { EditableProps } from 'slate-react/dist/components/editable';
+import clsx from "clsx";
+import { KeyboardEvent, useMemo } from "react";
+import { Descendant, TextUnit, createEditor } from "slate";
+import { withHistory } from "slate-history";
+import { Editable, Slate, withReact } from "slate-react";
+import { EditableProps } from "slate-react/dist/components/editable";
 import {
   MentionPopoverProvider,
+  mentionPlugin,
   useMentionableTypeahead,
-} from './mention/mention-richtext-support';
-import { MentionableByType } from './mention/mentionables';
-import { RichtextControls } from './RichtextControls';
-import { Element, Leaf, plugins } from './richtext-support';
+} from "./mention/mention-richtext-support";
+import { MentionableByType } from "./mention/mentionables";
+import { RichtextControls } from "./RichtextControls";
+import {
+  EditorPluginDefinition,
+  Element,
+  Leaf,
+  PluginsContext,
+} from "./richtext-support";
+import { linkPlugin } from "./link/link-richtext-support";
 
 export interface RichtextEditorProps {
   config?: EditableProps;
@@ -19,7 +26,9 @@ export interface RichtextEditorProps {
   readOnly?: boolean;
   placeholder?: string;
 
-  controls?: 'minimal' | 'full';
+  plugins: EditorPluginDefinition<any>[];
+
+  controls?: "minimal" | "full";
 
   suggest?(search: string): Promise<MentionableByType>;
   onChange?(value: Descendant[]): void;
@@ -27,13 +36,14 @@ export interface RichtextEditorProps {
 
 export function RichtextEditor({
   suggest,
-  value = [{ text: '' }],
+  value = [{ text: "" }],
   config = {},
   noPad,
   readOnly,
-  controls = 'full',
+  controls = "full",
   placeholder,
   onChange,
+  plugins,
 }: RichtextEditorProps) {
   const editor = useMemo(() => {
     let editor = createEditor();
@@ -124,21 +134,44 @@ export function RichtextEditor({
     onChange: onChangeWrapped,
   } = useMentionableTypeahead({ editor, suggest, onChange, onKeyDown });
 
+  const memoizedPlugins = useMemo(
+    () => [linkPlugin, mentionPlugin, ...plugins],
+    getDeps(plugins)
+  );
+
   return (
     <Slate editor={editor} initialValue={value} onChange={onChangeWrapped}>
-      <MentionPopoverProvider>
-        {!readOnly && <RichtextControls variant={controls} />}
-        <Editable
-          {...config}
-          renderElement={Element}
-          renderLeaf={Leaf}
-          readOnly={readOnly}
-          onKeyDown={readOnly ? undefined : onKeyDownWrapped}
-          className={clsx("fm-editor", noPad && "fm-editor-nopad")}
-          placeholder={placeholder}
-        />
-        {popover}
-      </MentionPopoverProvider>
+      <PluginsContext.Provider value={memoizedPlugins}>
+        <MentionPopoverProvider>
+          {!readOnly && <RichtextControls variant={controls} />}
+          <Editable
+            {...config}
+            renderElement={Element}
+            renderLeaf={Leaf}
+            readOnly={readOnly}
+            onKeyDown={readOnly ? undefined : onKeyDownWrapped}
+            className={clsx("fm-editor", noPad && "fm-editor-nopad")}
+            placeholder={placeholder}
+          />
+          {popover}
+        </MentionPopoverProvider>
+      </PluginsContext.Provider>
     </Slate>
   );
+}
+
+function getDeps(plugins: EditorPluginDefinition<any>[]) {
+  const deps = [];
+
+  for (const plugin of plugins) {
+    if (plugin.deps) {
+      deps.push(...plugin.deps);
+      continue;
+    }
+    for (const value of Object.values(plugin)) {
+      deps.push(value);
+    }
+  }
+
+  return deps;
 }

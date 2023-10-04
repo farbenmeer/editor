@@ -1,15 +1,21 @@
-import { ElementType, KeyboardEvent, ReactNode, createElement } from 'react';
-import { Descendant, Editor, Node, Path, TextUnit } from 'slate';
-import { RenderElementProps, RenderLeafProps } from 'slate-react';
-import { CustomElement } from './custom-types';
-import { diagramPlugin } from './diagram/diagram-richtext-support';
-import { linkPlugin } from './link/link-richtext-support';
-import { mentionPlugin } from './mention/mention-richtext-support';
-import { tablePlugin } from './table/table-richtext-support';
-import { linebreakPlugin } from './linebreak-richtext-support';
-import { imagePlugin } from './image/image-richtext-support';
+import {
+  ElementType,
+  KeyboardEvent,
+  ReactElement,
+  ReactNode,
+  createContext,
+  createElement,
+  useContext,
+} from "react";
+import { Descendant, Editor, Node, Path, TextUnit } from "slate";
+import { RenderElementProps, RenderLeafProps } from "slate-react";
+import { CustomElement, EmptyText } from "./custom-types";
 
-export const Leaf = ({ attributes, children, leaf }: RenderLeafProps & { leaf: any }) => {
+export const Leaf = ({
+  attributes,
+  children,
+  leaf,
+}: RenderLeafProps & { leaf: any }) => {
   if (leaf.bold) children = <strong>{children}</strong>;
   if (leaf.code) children = <code>{children}</code>;
   if (leaf.italic) children = <em>{children}</em>;
@@ -18,44 +24,54 @@ export const Leaf = ({ attributes, children, leaf }: RenderLeafProps & { leaf: a
 };
 
 type TagnameMap = {
-  [Key in CustomElement['type']]?: string;
+  [Key in CustomElement["type"]]?: string;
 };
 const tagNames: TagnameMap = {
-  'block-quote': 'blockquote',
-  'bulleted-list': 'ul',
-  'numbered-list': 'ol',
-  'heading': 'h2',
-  'heading-two': 'h3',
-  'list-item': 'li',
+  "block-quote": "blockquote",
+  "bulleted-list": "ul",
+  "numbered-list": "ol",
+  heading: "h2",
+  "heading-two": "h3",
+  "list-item": "li",
+};
+
+export type PluginElementProps<T> = Omit<RenderElementProps, "element"> & {
+  element: T & Node;
 };
 
 declare const EditorPluginType: unique symbol;
-export interface EditorPlugin<T extends Descendant> {
+export interface EditorPluginDefinition<
+  T extends { type: string; children: Descendant[] }
+> {
   [EditorPluginType]?: T;
+  name: string;
   isVoid?: boolean;
   markableVoid?: boolean;
   isInline?: boolean;
-  isElement(node: Node): node is T;
-  component: ElementType<RenderElementProps & { element: any }>;
+  isElement(node: Node | T): node is T;
+  component: ElementType<PluginElementProps<T>>;
   deleteBackward?(editor: Editor, unit: TextUnit): boolean | void;
   deleteForward?(editor: Editor, unit: TextUnit): boolean | void;
   insertBreak?(editor: Editor): boolean | void;
   onKeyDown?(editor: Editor, event: KeyboardEvent): boolean | void;
   controls?(editor: Editor, element: T, path: Path): ReactNode;
+  button?(): ReactNode;
   insertData?(editor: Editor, data: DataTransfer): boolean | void;
+  deps?: any[];
 }
 
-export const plugins = [
-  mentionPlugin,
-  linkPlugin,
-  diagramPlugin,
-  tablePlugin,
-  linebreakPlugin,
-  imagePlugin,
-] as const;
+export interface EditorPlugin<
+  T extends { type: string; children: Descendant[] },
+  O extends object | undefined = undefined
+> {
+  (options: O): EditorPluginDefinition<T>;
+}
+
+export const PluginsContext = createContext<EditorPluginDefinition<any>[]>([]);
 
 export function Element({ attributes, children, element }: RenderElementProps) {
   const style = { textAlign: element.align };
+  const plugins = useContext(PluginsContext);
 
   for (const plugin of plugins) {
     if (plugin.isElement(element)) {
@@ -67,8 +83,6 @@ export function Element({ attributes, children, element }: RenderElementProps) {
     }
   }
 
-  const tag = tagNames[element.type as never] ?? 'p';
+  const tag = tagNames[element.type as never] ?? "p";
   return createElement(tag, { style, ...attributes }, children);
 }
-
-export type PluginElement = NonNullable<(typeof plugins)[number][typeof EditorPluginType]>;

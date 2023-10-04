@@ -34,6 +34,7 @@
     "react-icons": "^4.11.0",
     "slate": "^0.94.1",
     "slate-history": "^0.93.0",
-    "slate-react": "^0.98.4"
+    "slate-react": "^0.98.4",
+    "thumbhash": "^0.1.1"
   }
 }
