@@ -31,6 +31,7 @@
     "@floating-ui/dom": "^1.5.3",
     "@floating-ui/react": "^0.25.4",
     "clsx": "^2.0.0",
+    "memoize-one": "^6.0.0",
     "react-icons": "^4.11.0",
     "slate": "^0.94.1",
     "slate-history": "^0.93.0",

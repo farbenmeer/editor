@@ -12,7 +12,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { BaseEditor, Descendant, Editor, Range, Transforms } from "slate";
+import { BaseEditor, Descendant, Editor, Range, Transforms, Node } from "slate";
 import {
   ReactEditor,
   RenderElementProps,
@@ -29,7 +29,8 @@ import {
   mentionMatches,
 } from "src/components/form/richtext/mention/mentionables";
 import classes from "../RichtextEditor.module.css";
-import type { EditorPluginDefinition } from "../richtext-support";
+import type { EditorPlugin, EditorPluginDefinition } from "../richtext-support";
+import memoize from "memoize-one";
 
 export type MentionElement = {
   type: "mention";
@@ -44,19 +45,9 @@ export const MentionContext = createContext<{
   },
 });
 
-export const isMention = (element: Descendant): element is MentionElement =>
-  "type" in element && element.type === "mention";
-
-export function withMentions<T extends BaseEditor>(editor: T): T {
-  const { isInline, isVoid, markableVoid } = editor;
-
-  editor.isInline = (element) => isMention(element) || isInline(element);
-  editor.isVoid = (element) => isMention(element) || isVoid(element);
-  editor.markableVoid = (element) =>
-    isMention(element) || markableVoid(element);
-
-  return editor;
-}
+export const isMention = (
+  element: Node | MentionElement
+): element is MentionElement => "type" in element && element.type === "mention";
 
 export const Mention = ({
   attributes,
@@ -300,10 +291,17 @@ export function useMentionableTypeahead({
   return { popover, onKeyDown, onChange };
 }
 
-export const mentionPlugin: EditorPluginDefinition<MentionElement> = {
-  isVoid: true,
-  markableVoid: true,
-  isInline: true,
-  component: Mention,
-  isElement: isMention,
-};
+interface PluginOptions {}
+
+export const mentionPlugin: EditorPlugin<MentionElement, PluginOptions> =
+  memoize(
+    ({}: PluginOptions) => ({
+      name: "mention",
+      isVoid: true,
+      markableVoid: true,
+      isInline: true,
+      component: Mention,
+      isElement: isMention,
+    }),
+    ([newOptions]: PluginOptions[], [oldOptions]: PluginOptions[]) => true
+  );

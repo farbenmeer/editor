@@ -4,20 +4,19 @@ import { Descendant, TextUnit, createEditor } from "slate";
 import { withHistory } from "slate-history";
 import { Editable, Slate, withReact } from "slate-react";
 import { EditableProps } from "slate-react/dist/components/editable";
+import { RichtextControls } from "./RichtextControls";
+import { linebreakPlugin } from "./linebreak-richtext-support";
 import {
   MentionPopoverProvider,
-  mentionPlugin,
   useMentionableTypeahead,
 } from "./mention/mention-richtext-support";
 import { MentionableByType } from "./mention/mentionables";
-import { RichtextControls } from "./RichtextControls";
 import {
   EditorPluginDefinition,
   Element,
   Leaf,
   PluginsContext,
 } from "./richtext-support";
-import { linkPlugin } from "./link/link-richtext-support";
 
 export interface RichtextEditorProps {
   config?: EditableProps;
@@ -134,10 +133,7 @@ export function RichtextEditor({
     onChange: onChangeWrapped,
   } = useMentionableTypeahead({ editor, suggest, onChange, onKeyDown });
 
-  const memoizedPlugins = useMemo(
-    () => [linkPlugin, mentionPlugin, ...plugins],
-    getDeps(plugins)
-  );
+  const memoizedPlugins = useMemo(() => [linebreakPlugin, ...plugins], plugins);
 
   return (
     <Slate editor={editor} initialValue={value} onChange={onChangeWrapped}>
@@ -158,20 +154,4 @@ export function RichtextEditor({
       </PluginsContext.Provider>
     </Slate>
   );
-}
-
-function getDeps(plugins: EditorPluginDefinition<any>[]) {
-  const deps = [];
-
-  for (const plugin of plugins) {
-    if (plugin.deps) {
-      deps.push(...plugin.deps);
-      continue;
-    }
-    for (const value of Object.values(plugin)) {
-      deps.push(value);
-    }
-  }
-
-  return deps;
 }

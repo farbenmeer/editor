@@ -1,10 +1,10 @@
-"use client";
 import { MdImage } from "react-icons/md";
 import { Editor, Node, Transforms } from "slate";
 import { ReactEditor, useReadOnly, useSlateStatic } from "slate-react";
 import { EditorPlugin, PluginElementProps } from "../richtext-support";
 import { GetObjectUrl, PutObjectUrl, S3Image } from "./S3Image";
 import { ImageMeta } from "./meta";
+import memoize from "memoize-one";
 
 interface ImageData extends ImageMeta {
   objectKey: string;
@@ -53,65 +53,66 @@ interface PluginOptions {
   putObjectUrl: PutObjectUrl;
 }
 
-export const imagePlugin: EditorPlugin<ImageElement, PluginOptions> = ({
-  getObjectUrl,
-  putObjectUrl,
-}) => {
-  function Image({
-    children,
-    element,
-    attributes,
-  }: PluginElementProps<ImageElement>) {
-    const readOnly = useReadOnly();
-    const editor = useSlateStatic();
-    const location = ReactEditor.findPath(editor, element);
+export const imagePlugin: EditorPlugin<ImageElement, PluginOptions> = memoize(
+  ({ getObjectUrl, putObjectUrl }) => {
+    function Image({
+      children,
+      element,
+      attributes,
+    }: PluginElementProps<ImageElement>) {
+      const readOnly = useReadOnly();
+      const editor = useSlateStatic();
+      const location = ReactEditor.findPath(editor, element);
 
-    async function onChange(objectKey: string, meta: ImageMeta) {
-      Transforms.setNodes<any>(
-        editor,
-        {
-          type: "image",
-          children: [{ text: "" }],
-          data: { objectKey, ...meta },
-        },
-        { at: location }
+      async function onChange(objectKey: string, meta: ImageMeta) {
+        Transforms.setNodes<any>(
+          editor,
+          {
+            type: "image",
+            children: [{ text: "" }],
+            data: { objectKey, ...meta },
+          },
+          { at: location }
+        );
+        Transforms.move(editor);
+      }
+
+      return (
+        <div
+          className="fm-editor-image"
+          style={{
+            aspectRatio: element.data
+              ? element.data.width / element.data.height
+              : undefined,
+            maxWidth: element.data ? `${element.data.width}px` : undefined,
+          }}
+          {...attributes}
+        >
+          <S3Image
+            objectKey={element.data?.objectKey ?? null}
+            src={null}
+            editable={!readOnly}
+            width={element.data?.width as number}
+            height={element.data?.height as number}
+            blurDataURL={element.data?.blurDataURL}
+            onChange={onChange}
+            getObjectUrl={getObjectUrl}
+            putObjectUrl={putObjectUrl}
+          />
+          {children}
+        </div>
       );
-      Transforms.move(editor);
     }
 
-    return (
-      <div
-        className="fm-editor-image"
-        style={{
-          aspectRatio: element.data
-            ? element.data.width / element.data.height
-            : undefined,
-          maxWidth: element.data ? `${element.data.width}px` : undefined,
-        }}
-        {...attributes}
-      >
-        <S3Image
-          objectKey={element.data?.objectKey ?? null}
-          src={null}
-          editable={!readOnly}
-          width={element.data?.width as number}
-          height={element.data?.height as number}
-          blurDataURL={element.data?.blurDataURL}
-          onChange={onChange}
-          getObjectUrl={getObjectUrl}
-          putObjectUrl={putObjectUrl}
-        />
-        {children}
-      </div>
-    );
-  }
-
-  return {
-    name: "image",
-    isElement: isImage,
-    component: Image,
-    button: ImageInsertButton,
-    isVoid: true,
-    deps: [getObjectUrl, putObjectUrl],
-  };
-};
+    return {
+      name: "image",
+      isElement: isImage,
+      component: Image,
+      button: ImageInsertButton,
+      isVoid: true,
+    };
+  },
+  ([newOptions]: PluginOptions[], [lastOptions]: PluginOptions[]) =>
+    newOptions.getObjectUrl === lastOptions.getObjectUrl &&
+    newOptions.putObjectUrl === lastOptions.putObjectUrl
+);

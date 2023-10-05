@@ -57,7 +57,6 @@ export interface EditorPluginDefinition<
   controls?(editor: Editor, element: T, path: Path): ReactNode;
   button?(): ReactNode;
   insertData?(editor: Editor, data: DataTransfer): boolean | void;
-  deps?: any[];
 }
 
 export interface EditorPlugin<
