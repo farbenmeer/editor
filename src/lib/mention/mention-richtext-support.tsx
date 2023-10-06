@@ -1,8 +1,8 @@
 import { autoUpdate, shift } from "@floating-ui/dom";
 import { flip, useFloating } from "@floating-ui/react";
-import clsx from "clsx";
-import Link from "next/link";
+import memoize from "memoize-one";
 import {
+  ElementType,
   KeyboardEventHandler,
   ReactNode,
   createContext,
@@ -12,25 +12,14 @@ import {
   useMemo,
   useState,
 } from "react";
-import { BaseEditor, Descendant, Editor, Range, Transforms, Node } from "slate";
-import {
-  ReactEditor,
-  RenderElementProps,
-  useFocused,
-  useSelected,
-} from "slate-react";
-import { CustomEditor } from "src/components/form/richtext/custom-types";
-import { MentionPopover } from "src/components/form/richtext/mention/MentionPopover";
-import { MentionableIcon } from "src/components/form/richtext/mention/MentionableIcon";
-import { MentionablePopover } from "src/components/form/richtext/mention/MentionablePopover";
-import {
-  Mentionable,
-  MentionableByType,
-  mentionMatches,
-} from "src/components/form/richtext/mention/mentionables";
-import classes from "../RichtextEditor.module.css";
-import type { EditorPlugin, EditorPluginDefinition } from "../richtext-support";
-import memoize from "memoize-one";
+import { Descendant, Editor, Node, Range, Transforms } from "slate";
+import { ReactEditor } from "slate-react";
+import { CustomEditor } from "../custom-types";
+import type {
+  EditorPluginDefinition,
+  PluginElementProps,
+} from "../richtext-support";
+import { MentionablePopover } from "./MentionablePopover";
 
 export type MentionElement = {
   type: "mention";
@@ -39,8 +28,13 @@ export type MentionElement = {
 
 export const MentionContext = createContext<{
   open(mention?: Mentionable, target?: HTMLElement): void;
+  Component: ElementType<MentionComponentProps<any>>;
+  Popover?: ElementType<MentionComponentProps<any>>;
 }>({
   open: () => {
+    throw new Error("Needs to be inside RichtextEditor");
+  },
+  Component: () => {
     throw new Error("Needs to be inside RichtextEditor");
   },
 });
@@ -53,61 +47,34 @@ export const Mention = ({
   attributes,
   element,
   children,
-}: RenderElementProps & { element: MentionElement }) => {
-  const { targetId, targetType, name } = element;
-  const selected = useSelected();
-  const focused = useFocused();
+}: PluginElementProps<MentionElement>) => {
+  const { open, Component } = useContext(MentionContext);
 
-  const { open } = useContext(MentionContext);
-
-  const className = clsx({
-    [classes.mention!]: true,
-    [classes.chapter!]: targetType === "Chapter",
-    [classes.person!]: targetType === "Person",
-    [classes.term!]: targetType === "Term",
-    [classes.selected!]: selected && focused,
-  });
-
-  const icon = targetType === "Person" && (
-    <MentionableIcon mentionable={element} />
-  );
-
-  return targetType === "Chapter" ? (
-    <Link
-      {...attributes}
-      contentEditable={false}
-      className={className}
-      aria-describedby="mention-popover"
-      href={`/chapters/${targetId}`}
-      onMouseEnter={(ev) => open(element, ev.currentTarget)}
-      onMouseLeave={() => open()}
-    >
-      <span>{name}</span>
-      {children}
-    </Link>
-  ) : (
+  return (
     <span
       {...attributes}
       contentEditable={false}
-      className={className}
+      className="fm-editor-mention"
       aria-describedby="mention-popover"
       onMouseEnter={(ev) => open(element, ev.currentTarget)}
       onMouseLeave={() => open()}
     >
-      {icon}
-      <span className={clsx(icon && "pl-0.5")}>{name}</span>
+      <Component mentionable={element} />
       {children}
     </span>
   );
 };
 
-export function MentionPopoverProvider({ children }: { children: ReactNode }) {
-  const [mention, setMention] = useState<{
-    mention: Mentionable;
-    target: HTMLElement;
-  } | null>();
-  const open = (mention?: Mentionable, target?: HTMLElement) =>
-    setMention(mention && target ? { mention, target } : null);
+export function MentionPopoverProvider({
+  children,
+  Component,
+  Popover,
+}: {
+  children: ReactNode;
+  Component?: ElementType<MentionComponentProps<Mentionable>>;
+  Popover?: ElementType<MentionComponentProps<Mentionable>>;
+}) {
+  const [mention, setMention] = useState<Mentionable | null>();
   const { refs, floatingStyles } = useFloating({
     placement: "bottom-start",
     open: !!mention,
@@ -115,16 +82,28 @@ export function MentionPopoverProvider({ children }: { children: ReactNode }) {
     middleware: [shift(), flip()],
   });
 
-  useEffect(() => {
-    refs.setReference(mention?.target ?? null);
-  }, [refs, mention]);
+  const value = useMemo(
+    () =>
+      Component && {
+        open: (mention?: Mentionable, target?: HTMLElement) => {
+          setMention(mention ?? null);
+          refs.setReference(target ?? null);
+        },
+        Component,
+      },
+    [Component, refs]
+  );
+
+  if (!value) {
+    return children;
+  }
 
   return (
-    <MentionContext.Provider value={{ open }}>
+    <MentionContext.Provider value={value}>
       {children}
-      {mention && (
+      {mention && Popover && (
         <div ref={refs.setFloating} style={{ ...floatingStyles, zIndex: 10 }}>
-          <MentionPopover mention={mention.mention} />
+          <Popover mentionable={mention} />
         </div>
       )}
     </MentionContext.Provider>
@@ -136,7 +115,7 @@ export const insertMention = (editor: Editor, mentionable: Mentionable) => {
     ...mentionable,
     type: "mention",
     children: [{ text: "" }],
-  } as MentionElement);
+  } as any);
   Transforms.move(editor);
 };
 
@@ -147,23 +126,20 @@ export function useMentionableTypeahead({
   onKeyDown: defaultOnKeyDown,
 }: {
   editor: CustomEditor;
-  suggest?(search: string): Promise<MentionableByType>;
+  suggest?(search: string): Promise<SuggestionGroup<Mentionable>[]>;
   onChange?(value: Descendant[]): void;
   onKeyDown?: KeyboardEventHandler;
 }) {
   const [target, setTarget] = useState<Range | undefined>();
   const [search, setSearch] = useState("");
 
-  const [results, setResults] = useState<MentionableByType>({});
+  const [results, setResults] = useState<SuggestionGroup<Mentionable>[]>([]);
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<Mentionable | undefined>();
-  const combinedResults = useMemo(() => {
-    return [
-      ...(results.chapters ?? []),
-      ...(results.people ?? []),
-      ...(results.terms ?? []),
-    ];
-  }, [results]);
+  const combinedResults = useMemo(
+    () => results.flatMap((group) => group.suggestions),
+    [results]
+  );
 
   // Suggestion Popover
   const suggestionsOpen = !!(target && combinedResults.length);
@@ -188,9 +164,7 @@ export function useMentionableTypeahead({
   const onKeyDown = useCallback<KeyboardEventHandler>(
     (event) => {
       if (!target || !combinedResults.length) return defaultOnKeyDown?.(event);
-      const index = combinedResults.findIndex((it) =>
-        mentionMatches(it, selected)
-      );
+      const index = combinedResults.indexOf(selected!);
       switch (event.key) {
         case "ArrowDown":
           event.preventDefault();
@@ -291,17 +265,52 @@ export function useMentionableTypeahead({
   return { popover, onKeyDown, onChange };
 }
 
-interface PluginOptions {}
+export interface SuggestionGroup<T extends Mentionable> {
+  title: string;
+  suggestions: T[];
+}
 
-export const mentionPlugin: EditorPlugin<MentionElement, PluginOptions> =
-  memoize(
-    ({}: PluginOptions) => ({
-      name: "mention",
-      isVoid: true,
-      markableVoid: true,
-      isInline: true,
-      component: Mention,
-      isElement: isMention,
-    }),
-    ([newOptions]: PluginOptions[], [oldOptions]: PluginOptions[]) => true
-  );
+export interface Mentionable {
+  title: string;
+  href: string;
+}
+
+interface MentionComponentProps<T extends Mentionable> {
+  mentionable: T;
+}
+
+interface PluginOptions<T extends Mentionable> {
+  component: ElementType<MentionComponentProps<T>>;
+  suggest(search: string): Promise<SuggestionGroup<T>[]>;
+  popover?: ElementType<MentionComponentProps<T>>;
+}
+
+export const optionsKey = Symbol("mentionPluginContext");
+
+function rawMentionPlugin<T extends Mentionable>(options: PluginOptions<T>) {
+  return {
+    name: "mention",
+    isVoid: true,
+    markableVoid: true,
+    isInline: true,
+    component: Mention,
+    isElement: isMention,
+    [optionsKey]: options,
+  } as EditorPluginDefinition<MentionElement>;
+}
+
+export const mentionPlugin = memoize(
+  rawMentionPlugin,
+  ([newOptions], [oldOptions]) =>
+    newOptions.component === oldOptions.component &&
+    newOptions.suggest === oldOptions.suggest &&
+    newOptions.popover === oldOptions.popover
+);
+
+export function getMentionPluginOptions(
+  plugin?: EditorPluginDefinition<MentionElement>
+) {
+  const options: PluginOptions<Mentionable> | null =
+    (plugin as any)?.[optionsKey] ?? null;
+  return options;
+}

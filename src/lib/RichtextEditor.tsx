@@ -8,9 +8,9 @@ import { RichtextControls } from "./RichtextControls";
 import { linebreakPlugin } from "./linebreak-richtext-support";
 import {
   MentionPopoverProvider,
+  getMentionPluginOptions,
   useMentionableTypeahead,
 } from "./mention/mention-richtext-support";
-import { MentionableByType } from "./mention/mentionables";
 import {
   EditorPluginDefinition,
   Element,
@@ -20,7 +20,7 @@ import {
 
 export interface RichtextEditorProps {
   config?: EditableProps;
-  value?: Descendant[];
+  defaultValue?: Descendant[];
   noPad?: boolean;
   readOnly?: boolean;
   placeholder?: string;
@@ -29,13 +29,11 @@ export interface RichtextEditorProps {
 
   controls?: "minimal" | "full";
 
-  suggest?(search: string): Promise<MentionableByType>;
   onChange?(value: Descendant[]): void;
 }
 
 export function RichtextEditor({
-  suggest,
-  value = [{ text: "" }],
+  defaultValue = [{ text: "" }],
   config = {},
   noPad,
   readOnly,
@@ -127,18 +125,34 @@ export function RichtextEditor({
     }
   }
 
+  const mentionPluginOptions = getMentionPluginOptions(
+    plugins.find((plugin) => plugin.name === "mention")
+  );
+
   const {
     popover,
     onKeyDown: onKeyDownWrapped,
     onChange: onChangeWrapped,
-  } = useMentionableTypeahead({ editor, suggest, onChange, onKeyDown });
+  } = useMentionableTypeahead({
+    editor,
+    suggest: mentionPluginOptions?.suggest,
+    onChange,
+    onKeyDown,
+  });
 
   const memoizedPlugins = useMemo(() => [linebreakPlugin, ...plugins], plugins);
 
   return (
-    <Slate editor={editor} initialValue={value} onChange={onChangeWrapped}>
+    <Slate
+      editor={editor}
+      initialValue={defaultValue}
+      onChange={onChangeWrapped}
+    >
       <PluginsContext.Provider value={memoizedPlugins}>
-        <MentionPopoverProvider>
+        <MentionPopoverProvider
+          Component={mentionPluginOptions?.component}
+          Popover={mentionPluginOptions?.popover}
+        >
           {!readOnly && <RichtextControls variant={controls} />}
           <Editable
             {...config}

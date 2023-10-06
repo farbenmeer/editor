@@ -8,7 +8,7 @@
   ],
   "private": false,
   "scripts": {
-    "dev": "tsc -w",
+    "dev": "next dev",
     "build": "tsc",
     "release": "pnpm build && pnpm publish"
   },

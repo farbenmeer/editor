@@ -1,7 +1,0 @@
-.image {
-  @apply object-cover w-5 h-5 rounded-full -mt-0.5 mr-0.5 inline-block mb-0 bg-gray-500;
-}
-
-.icon {
-  @apply text-xl mr-0.5 ml-0.5 inline-block mb-0 -mt-0.5;
-}

@@ -1,7 +1,7 @@
 import { MdImage } from "react-icons/md";
 import { Editor, Node, Transforms } from "slate";
 import { ReactEditor, useReadOnly, useSlateStatic } from "slate-react";
-import { EditorPlugin, PluginElementProps } from "../richtext-support";
+import { EditorPlugin, PluginElementProps } from "../lib/richtext-support";
 import { GetObjectUrl, PutObjectUrl, S3Image } from "./S3Image";
 import { ImageMeta } from "./meta";
 import memoize from "memoize-one";
