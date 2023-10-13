@@ -11,9 +11,10 @@ import {
   useEffect,
   useMemo,
   useState,
+  KeyboardEvent,
 } from "react";
 import { Descendant, Editor, Node, Range, Transforms } from "slate";
-import { ReactEditor } from "slate-react";
+import { ReactEditor, useSlate } from "slate-react";
 import { CustomEditor } from "../custom-types";
 import type {
   EditorPluginDefinition,
@@ -23,8 +24,9 @@ import { MentionablePopover } from "./MentionablePopover";
 
 export type MentionElement = {
   type: "mention";
-  children: [{ text: "" }];
-} & Mentionable;
+  children: Descendant[];
+  mentionable?: Mentionable;
+};
 
 export const MentionContext = createContext<{
   open(mention?: Mentionable, target?: HTMLElement): void;
@@ -43,6 +45,31 @@ export const isMention = (
   element: Node | MentionElement
 ): element is MentionElement => "type" in element && element.type === "mention";
 
+function MentionDraft({
+  attributes,
+  element,
+  children,
+}: PluginElementProps<MentionElement>) {
+  const editor = useSlate();
+  const search = Node.string(element);
+  const [busy, setBusy] = useState(false);
+  const [results, setResults] = useState<SuggestionGroup<Mentionable>[]>([]);
+
+  useEffect(() => {
+    setBusy(true);
+  });
+  const [selected, setSelected] = useState<Mentionable | undefined>();
+  const combinedResults = useMemo(
+    () => results.flatMap((group) => group.suggestions),
+    [results]
+  );
+  return (
+    <span {...attributes} aria-describedby="mentionable-popover">
+      @{children}
+    </span>
+  );
+}
+
 export const Mention = ({
   attributes,
   element,
@@ -50,16 +77,26 @@ export const Mention = ({
 }: PluginElementProps<MentionElement>) => {
   const { open, Component } = useContext(MentionContext);
 
+  const { mentionable } = element;
+
+  if (!mentionable) {
+    return (
+      <MentionDraft attributes={attributes} element={element}>
+        {children}
+      </MentionDraft>
+    );
+  }
+
   return (
     <span
       {...attributes}
       contentEditable={false}
       className="fm-editor-mention"
       aria-describedby="mention-popover"
-      onMouseEnter={(ev) => open(element, ev.currentTarget)}
+      onMouseEnter={(ev) => open(mentionable, ev.currentTarget)}
       onMouseLeave={() => open()}
     >
-      <Component mentionable={element} />
+      <Component mentionable={mentionable} />
       {children}
     </span>
   );
@@ -265,6 +302,37 @@ export function useMentionableTypeahead({
   return { popover, onKeyDown, onChange };
 }
 
+function insertText(editor: Editor, text: string) {
+  const [mention] = Editor.nodes(editor, { match: isMention });
+
+  if (mention) {
+    const [node] = mention;
+    if ((node as any).mentionable) {
+      return;
+    }
+    if (text === " ") {
+      Transforms.unwrapNodes(editor);
+      Transforms.move(editor);
+      return true;
+    }
+  }
+  console.log({ mention });
+  console.log("insertText", text);
+  if (text === "@") {
+    console.log("insert Mention");
+    if (editor.selection) {
+      console.log("collapse selection");
+      Transforms.select(editor, editor.selection.anchor);
+    }
+    Transforms.insertNodes(editor, {
+      type: "mention",
+      children: [{ text: "" }],
+    } as any);
+    Transforms.move(editor);
+    return true;
+  }
+}
+
 export interface SuggestionGroup<T extends Mentionable> {
   title: string;
   suggestions: T[];
@@ -288,14 +356,119 @@ interface PluginOptions<T extends Mentionable> {
 export const optionsKey = Symbol("mentionPluginContext");
 
 function rawMentionPlugin<T extends Mentionable>(options: PluginOptions<T>) {
+  function MentionDraft({
+    attributes,
+    element,
+    children,
+  }: PluginElementProps<MentionElement>) {
+    const editor = useSlate();
+    const search = Node.string(element);
+    const [busy, setBusy] = useState(false);
+    const [results, setResults] = useState<SuggestionGroup<Mentionable>[]>([]);
+    console.log("render draft", search, results);
+
+    useEffect(() => {
+      setBusy(true);
+      options
+        .suggest(search)
+        .then(setResults)
+        .finally(() => setBusy(false));
+    }, [search]);
+
+    const [selected, setSelected] = useState<Mentionable | undefined>();
+    const combinedResults = useMemo(
+      () => results.flatMap((group) => group.suggestions),
+      [results]
+    );
+
+    function onKeyDown(event: KeyboardEvent<HTMLSpanElement>) {
+      console.log("key", event.key);
+      const index = combinedResults.indexOf(selected!);
+      switch (event.key) {
+        case "Space":
+          event.preventDefault();
+          Transforms.unwrapNodes(editor);
+          Transforms.move(editor);
+          break;
+        case "ArrowDown":
+          event.preventDefault();
+          setSelected(combinedResults[(index + 1) % combinedResults.length]);
+          break;
+        case "ArrowUp":
+          event.preventDefault();
+          setSelected(
+            combinedResults[
+              (index - 1 + combinedResults.length) % combinedResults.length
+            ]
+          );
+          break;
+        case "Tab":
+        case "Enter":
+          event.preventDefault();
+          insertMention(editor, selected!);
+          break;
+        case "Escape":
+          event.preventDefault();
+          Transforms.unwrapNodes(editor);
+          Transforms.move(editor);
+          break;
+      }
+    }
+    return (
+      <span
+        {...attributes}
+        aria-describedby="mentionable-popover"
+        onKeyDown={onKeyDown}
+      >
+        @{children}
+      </span>
+    );
+  }
+
+  function Mention({
+    attributes,
+    element,
+    children,
+  }: PluginElementProps<MentionElement>) {
+    console.log("mention");
+    const { open, Component } = useContext(MentionContext);
+
+    const { mentionable } = element;
+
+    if (!mentionable) {
+      return (
+        <MentionDraft attributes={attributes} element={element}>
+          {children}
+        </MentionDraft>
+      );
+    }
+
+    return (
+      <span
+        {...attributes}
+        contentEditable={false}
+        className="fm-editor-mention"
+        aria-describedby="mention-popover"
+        onMouseEnter={(ev) => open(mentionable, ev.currentTarget)}
+        onMouseLeave={() => open()}
+      >
+        <Component mentionable={mentionable} />
+        {children}
+      </span>
+    );
+  }
+
   return {
     name: "mention",
-    isVoid: true,
+    isVoid(element) {
+      return Boolean(element.mentionable);
+    },
     markableVoid: true,
     isInline: true,
     component: Mention,
     isElement: isMention,
-    [optionsKey]: options,
+    insertText,
+    //[optionsKey]: options,
   } as EditorPluginDefinition<MentionElement>;
 }
 

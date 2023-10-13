@@ -1,9 +1,5 @@
-'use client';
-
-import * as Dialog from '@radix-ui/react-dialog';
-import { InlineTextEditor } from 'src/components/form/editor/inline-text/InlineTextEditor';
-import { Button } from 'src/components/form/button/Button';
-import { ReactNode, useState } from 'react';
+import * as Dialog from "@radix-ui/react-dialog";
+import { ReactNode, useState } from "react";
 
 interface Props {
   url?: string;
@@ -12,43 +8,52 @@ interface Props {
   children: ReactNode;
 }
 
-export function LinkEditDialog({ url: initial, onSave, onRemove, children }: Props) {
+export function LinkEditDialog({
+  url: initial,
+  onSave,
+  onRemove,
+  children,
+}: Props) {
   const [currentUrl, setUrl] = useState<string | null>(null);
-  const url = currentUrl ?? initial ?? '';
+  const url = currentUrl ?? initial ?? "";
 
   return (
     <Dialog.Root
       onOpenChange={() => {
         setUrl(null);
-      }}>
+      }}
+    >
       <Dialog.Trigger asChild>{children}</Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Overlay className="bg-slate-800/70 fixed inset-0 z-50" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white z-[51] p-8 rounded-md shadow-md shadow-slate-800 flex flex-col gap-6 w-full max-w-lg">
-          <Dialog.Title className="text-lg flex gap-2 items-center">Link bearbeiten</Dialog.Title>
+        <Dialog.Overlay className="fm-editor-dialog-overlay" />
+        <Dialog.Content className="fm-editor-dialog">
+          <Dialog.Title className="fm-editor-dialog-title">
+            Link bearbeiten
+          </Dialog.Title>
           <Dialog.Description>
             Zu folgender URL verlinken:
-            <InlineTextEditor
+            <input
               type="url"
               placeholder="URL"
-              className="p-4"
+              className="fm-editor-text-input"
               value={url}
-              onChange={setUrl}
+              onChange={(event) => setUrl(event.target.value)}
             />
           </Dialog.Description>
-          <div className="flex gap-4 flex-col items-stretch sm:flex-row sm:items-start">
+          <div className="fm-editor-dialog-actions">
             <Dialog.Close asChild>
-              <Button>Abbrechen</Button>
+              <button>Abbrechen</button>
             </Dialog.Close>
             {initial && (
               <Dialog.Close onClick={onRemove} asChild>
-                <Button>Link entfernen</Button>
+                <button>Link entfernen</button>
               </Dialog.Close>
             )}
-            <Dialog.Close onClick={() => currentUrl && onSave(currentUrl)} asChild>
-              <Button primary disabled={!currentUrl}>
-                Speichern
-              </Button>
+            <Dialog.Close
+              onClick={() => currentUrl && onSave(currentUrl)}
+              asChild
+            >
+              <button disabled={!currentUrl}>Speichern</button>
             </Dialog.Close>
           </div>
         </Dialog.Content>

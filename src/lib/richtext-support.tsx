@@ -1,7 +1,6 @@
 import {
   ElementType,
   KeyboardEvent,
-  ReactElement,
   ReactNode,
   createContext,
   createElement,
@@ -9,7 +8,8 @@ import {
 } from "react";
 import { Descendant, Editor, Node, Path, TextUnit } from "slate";
 import { RenderElementProps, RenderLeafProps } from "slate-react";
-import { CustomElement, EmptyText } from "./custom-types";
+import { TextInsertTextOptions } from "slate/dist/interfaces/transforms/text";
+import { CustomElement } from "./custom-types";
 
 export const Leaf = ({
   attributes,
@@ -45,7 +45,7 @@ export interface EditorPluginDefinition<
 > {
   [EditorPluginType]?: T;
   name: string;
-  isVoid?: boolean;
+  isVoid?: boolean | ((element: T) => boolean);
   markableVoid?: boolean;
   isInline?: boolean;
   isElement(node: Node | T): node is T;
@@ -57,14 +57,20 @@ export interface EditorPluginDefinition<
   controls?(editor: Editor, element: T, path: Path): ReactNode;
   button?(): ReactNode;
   insertData?(editor: Editor, data: DataTransfer): boolean | void;
+  insertText?(
+    editor: Editor,
+    text: string,
+    options?: TextInsertTextOptions | undefined
+  ): boolean | void;
+  provider?: ElementType<{ children: ReactNode }>;
 }
 
-export interface EditorPlugin<
+export type EditorPlugin<
   T extends { type: string; children: Descendant[] },
   O extends object | undefined = undefined
-> {
-  (options: O): EditorPluginDefinition<T>;
-}
+> = O extends undefined
+  ? () => EditorPluginDefinition<T>
+  : (options: O) => EditorPluginDefinition<T>;
 
 export const PluginsContext = createContext<EditorPluginDefinition<any>[]>([]);
 

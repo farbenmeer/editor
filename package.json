@@ -30,6 +30,7 @@
   "dependencies": {
     "@floating-ui/dom": "^1.5.3",
     "@floating-ui/react": "^0.25.4",
+    "@radix-ui/react-dialog": "^1.0.5",
     "clsx": "^2.0.0",
     "memoize-one": "^6.0.0",
     "react-icons": "^4.11.0",

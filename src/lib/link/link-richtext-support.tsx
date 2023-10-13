@@ -16,6 +16,7 @@ import {
 import { LinkEditDialog } from "./link-edit-dialog";
 import { MdEdit } from "react-icons/md";
 import {
+  EditorPlugin,
   EditorPluginDefinition,
   PluginElementProps,
 } from "../richtext-support";
@@ -95,9 +96,11 @@ export function Link({
   );
 }
 
-export const linkPlugin: EditorPluginDefinition<LinkElement> = {
+const linkPluginDefinition: EditorPluginDefinition<LinkElement> = {
   name: "link",
   isElement: isLink,
   component: Link,
   isInline: true,
 };
+
+export const linkPlugin: EditorPlugin<LinkElement> = () => linkPluginDefinition;

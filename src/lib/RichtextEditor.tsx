@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { KeyboardEvent, useMemo } from "react";
+import { CSSProperties, KeyboardEvent, useMemo, useRef } from "react";
 import { Descendant, TextUnit, createEditor } from "slate";
 import { withHistory } from "slate-history";
 import { Editable, Slate, withReact } from "slate-react";
@@ -17,6 +17,8 @@ import {
   Leaf,
   PluginsContext,
 } from "./richtext-support";
+import { useRouter } from "next/navigation";
+import { TextInsertTextOptions } from "slate/dist/interfaces/transforms/text";
 
 export interface RichtextEditorProps {
   config?: EditableProps;
@@ -24,8 +26,10 @@ export interface RichtextEditorProps {
   noPad?: boolean;
   readOnly?: boolean;
   placeholder?: string;
+  className?: string;
+  style?: CSSProperties;
 
-  plugins: EditorPluginDefinition<any>[];
+  plugins?: EditorPluginDefinition<any>[];
 
   controls?: "minimal" | "full";
 
@@ -33,15 +37,24 @@ export interface RichtextEditorProps {
 }
 
 export function RichtextEditor({
-  defaultValue = [{ text: "" }],
+  defaultValue = [{ type: "paragraph", children: [{ text: "" }] }],
   config = {},
+  style,
+  className,
   noPad,
   readOnly,
   controls = "full",
   placeholder,
   onChange,
-  plugins,
+  plugins = [],
 }: RichtextEditorProps) {
+  const previousPluginsLength = useRef(plugins.length);
+  if (plugins.length !== previousPluginsLength.current) {
+    window.location.reload();
+    return null;
+  }
+  const memoizedPlugins = useMemo(() => [linebreakPlugin, ...plugins], plugins);
+
   const editor = useMemo(() => {
     let editor = createEditor();
     editor = withHistory(editor);
@@ -55,31 +68,38 @@ export function RichtextEditor({
       deleteBackward,
       insertBreak,
       insertData,
+      insertText,
     } = editor;
 
     editor.isVoid = function isVoidWithPlugins(element) {
-      for (const plugin of plugins) {
-        if (plugin.isVoid && plugin.isElement(element)) return true;
+      for (const plugin of memoizedPlugins) {
+        if (plugin.isElement(element)) {
+          if (typeof plugin.isVoid === "function") {
+            return plugin.isVoid(element as any);
+          } else if (typeof plugin.isVoid === "boolean") {
+            return plugin.isVoid;
+          }
+        }
       }
       return isVoid(element);
     };
 
     editor.markableVoid = function markableVoidWithPlugiins(element) {
-      for (const plugin of plugins) {
+      for (const plugin of memoizedPlugins) {
         if (plugin.markableVoid && plugin.isElement(element)) return true;
       }
       return markableVoid(element);
     };
 
     editor.isInline = function isInlineWithPlugins(element) {
-      for (const plugin of plugins) {
+      for (const plugin of memoizedPlugins) {
         if (plugin.isInline && plugin.isElement(element)) return true;
       }
       return isInline(element);
     };
 
     editor.insertData = function insertDataWithPlugins(data) {
-      for (const plugin of plugins) {
+      for (const plugin of memoizedPlugins) {
         if (plugin.insertData?.(editor, data)) {
           return;
         }
@@ -88,7 +108,7 @@ export function RichtextEditor({
     };
 
     editor.deleteBackward = function deleteBackwardWithPlugins(unit: TextUnit) {
-      for (const plugin of plugins) {
+      for (const plugin of memoizedPlugins) {
         if (plugin.deleteBackward?.(editor, unit)) {
           return;
         }
@@ -97,7 +117,7 @@ export function RichtextEditor({
     };
 
     editor.deleteForward = function deleteForwardWithPlugins(unit: TextUnit) {
-      for (const plugin of plugins) {
+      for (const plugin of memoizedPlugins) {
         if (plugin.deleteForward?.(editor, unit)) {
           return;
         }
@@ -106,7 +126,7 @@ export function RichtextEditor({
     };
 
     editor.insertBreak = function insertBreakWithPlugins() {
-      for (const plugin of plugins) {
+      for (const plugin of memoizedPlugins) {
         if (plugin.insertBreak?.(editor)) {
           return;
         }
@@ -114,57 +134,44 @@ export function RichtextEditor({
       insertBreak();
     };
 
+    editor.insertText = function insertTextWithPlugins(
+      text: string,
+      options?: TextInsertTextOptions | undefined
+    ) {
+      for (const plugin of memoizedPlugins) {
+        if (plugin.insertText?.(editor, text, options)) {
+          return;
+        }
+      }
+      console.log("base insertText");
+      insertText(text, options);
+    };
+
     return editor;
-  }, []);
+  }, [memoizedPlugins]);
 
   function onKeyDown(event: KeyboardEvent) {
-    for (const plugin of plugins) {
+    for (const plugin of memoizedPlugins) {
       if (plugin.onKeyDown?.(editor, event)) {
         return;
       }
     }
   }
 
-  const mentionPluginOptions = getMentionPluginOptions(
-    plugins.find((plugin) => plugin.name === "mention")
-  );
-
-  const {
-    popover,
-    onKeyDown: onKeyDownWrapped,
-    onChange: onChangeWrapped,
-  } = useMentionableTypeahead({
-    editor,
-    suggest: mentionPluginOptions?.suggest,
-    onChange,
-    onKeyDown,
-  });
-
-  const memoizedPlugins = useMemo(() => [linebreakPlugin, ...plugins], plugins);
-
   return (
-    <Slate
-      editor={editor}
-      initialValue={defaultValue}
-      onChange={onChangeWrapped}
-    >
+    <Slate editor={editor} initialValue={defaultValue} onChange={onChange}>
       <PluginsContext.Provider value={memoizedPlugins}>
-        <MentionPopoverProvider
-          Component={mentionPluginOptions?.component}
-          Popover={mentionPluginOptions?.popover}
-        >
-          {!readOnly && <RichtextControls variant={controls} />}
-          <Editable
-            {...config}
-            renderElement={Element}
-            renderLeaf={Leaf}
-            readOnly={readOnly}
-            onKeyDown={readOnly ? undefined : onKeyDownWrapped}
-            className={clsx("fm-editor", noPad && "fm-editor-nopad")}
-            placeholder={placeholder}
-          />
-          {popover}
-        </MentionPopoverProvider>
+        {!readOnly && <RichtextControls variant={controls} />}
+        <Editable
+          {...config}
+          renderElement={Element}
+          renderLeaf={Leaf}
+          readOnly={readOnly}
+          onKeyDown={readOnly ? undefined : onKeyDown}
+          className={clsx("fm-editor", noPad && "fm-editor-nopad", className)}
+          style={style}
+          placeholder={placeholder}
+        />
       </PluginsContext.Provider>
     </Slate>
   );
