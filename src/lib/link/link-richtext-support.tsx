@@ -74,7 +74,7 @@ export function Link({
   }
 
   return (
-    <span {...attributes} className="inline-flex gap-1">
+    <span {...attributes} className="fm-editor-link">
       <a
         href={element.url}
         className="underline"
