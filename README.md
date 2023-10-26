@@ -25,6 +25,7 @@ Three commands so far:
 pnpm i
 ```
 to install dependencies.
+
 ```bash
 pnpm build
 ```
@@ -34,7 +35,7 @@ Output ends up in the `dist` folder.
 ```bash
 pnpm dev
 ```
-(which just runs `tsc` in watch mode) to keep the `dist`-folder up to date while working on stuff
+(which runs `next dev` for the example project in the app-folder)
 
 
 
